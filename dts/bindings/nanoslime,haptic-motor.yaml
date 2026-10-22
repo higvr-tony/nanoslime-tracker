@@ -1,0 +1,18 @@
+description: |
+  Vibration motor (ERM) driven by PWM through a low-side MOSFET.
+  Duty follows the haptics intensity received from the receiver.
+
+  Example:
+    haptics {
+      compatible = "nanoslime,haptic-motor";
+      haptic-pwms = <&pwm2 0 PWM_USEC(50) PWM_POLARITY_NORMAL>;
+    };
+
+compatible: "nanoslime,haptic-motor"
+
+properties:
+  haptic-pwms:
+    type: phandle-array
+    required: true
+    specifier-space: pwm
+    description: PWM output driving the motor, ~20 kHz to stay inaudible.

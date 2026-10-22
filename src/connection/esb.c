@@ -31,6 +31,7 @@
 #include <zephyr/sys/crc.h>
 
 #include "esb.h"
+#include "system/haptics.h"
 
 uint8_t last_reset = 0;
 //const nrfx_timer_t m_timer = NRFX_TIMER_INSTANCE(1);
@@ -75,6 +76,9 @@ uint64_t pairing_packets = 0;
 //|TX  CRC8|ack     |device_addr                                          |
 //|RX  CRC8|ack     |recv_addr                                            |
 
+//|ACK 0xA7|seq     |id 0    |int 0   |... up to 15 entries of tracker id, intensity (haptics state table)
+#define HAPTICS_ACK_MARKER 0xA7
+
 void event_handler(struct esb_evt const *event)
 {
 	switch (event->evt_id)
@@ -108,8 +112,7 @@ void event_handler(struct esb_evt const *event)
 			clocks_stop();
 		break;
 	case ESB_EVENT_RX_RECEIVED:
-		// TODO: have to read rx until -ENODATA (or -EACCES/-EINVAL)
-		if (!esb_read_rx_payload(&rx_payload)) // zero, rx success
+		while (!esb_read_rx_payload(&rx_payload)) // zero, rx success, read until -ENODATA (or -EACCES/-EINVAL)
 		{
 			LOG_DBG("rx len: %d, pipe: %d", rx_payload.length, rx_payload.pipe);
 			if (!paired_addr[0]) // zero, not paired
@@ -120,7 +123,11 @@ void event_handler(struct esb_evt const *event)
 			}
 			else
 			{
-				if (rx_payload.length == 4)
+				if (rx_payload.length >= 2 && rx_payload.data[0] == HAPTICS_ACK_MARKER) // haptics state table
+				{
+					haptics_parse_table(rx_payload.data, rx_payload.length, paired_addr[1]);
+				}
+				else if (rx_payload.length == 4)
 				{
 					// TODO: Device should never receive packets if it is already paired, why is this packet received?
 					// This may be part of acknowledge

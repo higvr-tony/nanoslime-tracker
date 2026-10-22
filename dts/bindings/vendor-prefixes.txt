@@ -1,0 +1,2 @@
+# vendor prefixes for bindings in this repository
+nanoslime	NanoSlime
